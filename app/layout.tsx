@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ServiceWorkerRegistration from "./sw-register";
@@ -17,13 +17,16 @@ export const metadata: Metadata = {
   title: "Medicine Tracking",
   description: "Track and manage medicines with offline support.",
   manifest: "/manifest.webmanifest",
-  themeColor: "#111827",
   applicationName: "Medicine Tracking",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "Medicine Tracking",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#111827",
 };
 
 export default function RootLayout({
