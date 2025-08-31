@@ -1,103 +1,213 @@
-import Image from "next/image";
+import { Suspense } from 'react'
+import Link from 'next/link'
+import { getFamilyMembers } from '@/lib/actions'
 
-export default function Home() {
+
+// Server Component - Ana sayfa
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ userId?: string; view?: string; selectedMember?: string; search?: string }>
+}) {
+  const params = await searchParams
+  const userId = params.userId || 'demo-user' // Demo için sabit user ID
+  const currentView = params.view || 'dailyProgram'
+  const selectedMemberId = params.selectedMember
+  const searchQuery = params.search || ''
+
+  // Server-side'da veri çekme
+  const familyMembers = await getFamilyMembers(userId)
+  const selectedMember = familyMembers.find(member => member.id === selectedMemberId) || familyMembers[0]
+
+  // Haftanın günleri
+  const daysOfWeek = [
+    'Pazartesi',
+    'Salı', 
+    'Çarşamba',
+    'Perşembe',
+    'Cuma',
+    'Cumartesi',
+    'Pazar',
+  ]
+
+  // Bugünün günü
+  const today = new Date()
+  const dayIndex = today.getDay() === 0 ? 6 : today.getDay() - 1
+  const todayName = daysOfWeek[dayIndex]
+
+  // İlaçları filtrele
+  const medications = selectedMember ? selectedMember.medications : []
+  const todayMedications = medications.filter((med: any) => med.days.includes(todayName))
+  const dayParam = params.day
+  const selectedDayName = dayParam || todayName
+
+  const filteredMedications = medications.filter(
+    (med: any) =>
+      med.days.includes(selectedDayName) &&
+      med.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  // Zaman bazlı kategoriler
+  const now = new Date()
+  const timeNow = now.getHours() * 60 + now.getMinutes()
+
+  const approachingMeds = filteredMedications.filter((med: any) => {
+    const [hour, minute] = med.time.split(':')
+    const medTimeInMinutes = parseInt(hour, 10) * 60 + parseInt(minute, 10)
+    return !med.isTaken && medTimeInMinutes >= timeNow
+  })
+
+  const takenMeds = filteredMedications.filter((med: any) => med.isTaken)
+  const untakenMeds = filteredMedications.filter((med: any) => {
+    const [hour, minute] = med.time.split(':')
+    const medTimeInMinutes = parseInt(hour, 10) * 60 + parseInt(minute, 10)
+    return !med.isTaken && medTimeInMinutes < timeNow
+  })
+const filteredMedicationsByDay = (day: string) =>
+  medications.filter((med: any) => med.days.includes(day) && med.name.toLowerCase().includes(searchQuery.toLowerCase()))
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="min-h-screen bg-gray-50 p-4 font-sans text-gray-800 flex flex-col items-center">
+      <div className="w-full max-w-2xl bg-white shadow-2xl rounded-3xl p-6 md:p-8 space-y-8 relative">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold text-gray-800">
+            🏥 İlaç Takip Sistemi
+          </h1>
+          <Link
+            href="/manage"
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            👥 Kişi Yönetimi
+          </Link>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+        <p className="text-gray-500 text-lg">
+          Sizin ve ailenizin ilaç takibini kolaylaştırın.
+        </p>
+
+        <Suspense fallback={<div>Aile üyeleri yükleniyor...</div>}>
+          <FamilyMemberSelectorServer
+            familyMembers={familyMembers}
+            selectedMemberId={selectedMemberId}
+            userId={userId}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+        </Suspense>
+
+        <NotificationPermissionClient />
+
+        <Suspense fallback={<div>Form yükleniyor...</div>}>
+          <MedicationFormServer
+            selectedMember={selectedMember}
+            userId={userId}
+            daysOfWeek={daysOfWeek}
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </Suspense>
+
+        <SearchBarClient
+          searchQuery={searchQuery}
+          selectedMemberName={selectedMember?.name}
+        />
+
+        <div className="flex-1 overflow-y-auto pb-24">
+          {currentView === 'dailyProgram' && (
+            <>
+              <DaySwitcher daysOfWeek={daysOfWeek} todayIndex={dayIndex} />
+              {filteredMedications.length === 0 ? (
+                <p className="text-center text-gray-500 p-4 border border-gray-200 rounded-xl">
+                  Bu gün alınacak ilaç bulunmuyor.
+                </p>
+              ) : (
+                <MedicationListServer
+                  medications={filteredMedications}
+                  userId={userId}
+                  memberId={selectedMemberId}
+                  daysOfWeek={daysOfWeek}
+                  type="daily"
+                />
+              )}
+            </>
+          )}
+
+          {currentView === 'statusTracking' && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-gray-700">
+                Bugünkü Durum Takibi: {selectedMember?.name}
+              </h2>
+
+              <div className="bg-white p-4 rounded-xl shadow-sm">
+                <h3 className="text-xl font-bold text-gray-700 mb-3">
+                  ⏰ Yaklaşan İlaçlar
+                </h3>
+                <MedicationListServer
+                  medications={approachingMeds}
+                  userId={userId}
+                  memberId={selectedMember?.id}
+                  daysOfWeek={daysOfWeek}
+                  type="approaching"
+                />
+              </div>
+
+              <div className="bg-white p-4 rounded-xl shadow-sm">
+                <h3 className="text-xl font-bold text-gray-700 mb-3">
+                  ✅ Kullanılan İlaçlar
+                </h3>
+                <MedicationListServer
+                  medications={takenMeds}
+                  userId={userId}
+                  memberId={selectedMember?.id}
+                  daysOfWeek={daysOfWeek}
+                  type="taken"
+                />
+              </div>
+
+              <div className="bg-white p-4 rounded-xl shadow-sm">
+                <h3 className="text-xl font-bold text-gray-700 mb-3">
+                  ❌ Kullanılmayan İlaçlar
+                </h3>
+                <MedicationListServer
+                  medications={untakenMeds}
+                  userId={userId}
+                  memberId={selectedMember?.id}
+                  daysOfWeek={daysOfWeek}
+                  type="untaken"
+                />
+              </div>
+            </div>
+          )}
+
+          {currentView === 'allMedications' && (
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-gray-700">
+                Tüm İlaçlar: {selectedMember?.name}
+              </h2>
+              {medications.length === 0 ? (
+                <p className="text-center text-gray-500 p-4 border border-gray-200 rounded-xl">
+                  Henüz ilaç eklenmedi.
+                </p>
+              ) : (
+                <MedicationListServer
+                  medications={medications.filter((med: any) =>
+                    med.name.toLowerCase().includes(searchQuery.toLowerCase())
+                  )}
+                  userId={userId}
+                  memberId={selectedMember?.id}
+                  daysOfWeek={daysOfWeek}
+                  type="all"
+                />
+              )}
+            </div>
+          )}
+        </div>
+
+        <NavigationBarClient currentView={currentView} />
+      </div>
     </div>
-  );
+  )
 }
+
+import FamilyMemberSelectorServer from '@/components/server/FamilyMemberSelectorServer'
+import MedicationFormServer from '@/components/server/MedicationFormServer'
+import MedicationListServer from '@/components/server/MedicationListServer'
+import SearchBarClient from '@/components/client/SearchBarClient'
+import NavigationBarClient from '@/components/client/NavigationBarClient'
+import NotificationPermissionClient from '@/components/client/NotificationPermissionClient'
+import DaySwitcher from '@/components/client/DaySwitcher';
+
